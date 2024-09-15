@@ -1,29 +1,25 @@
+"use client";
+
 import Image from "next/image";
+import StoryForm from "./components/StoryForm";
 
 export default function Home() {
+  const handleStorySubmit = (prompt: string) => {
+    // Здесь будет логика отправки запроса на создание истории
+    console.log("Создание истории с промптом:", prompt);
+  };
+
   return (
-    <div className="grid grid-rows-[1fr_auto] min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 items-center justify-center text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to StoryTelling</h1>
-        <p className="text-xl mb-8">Unleash your creativity and craft amazing stories</p>
-        
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="#"
-            // Replace '#' with the actual link to start creating stories
-          >
-            Start Creating
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://t.me/sergiobulaev"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Join our Telegram
-          </a>
-        </div>
+    <div className="grid grid-rows-[auto_1fr_auto] min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+      <header className="text-center">
+        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text">
+          Персонализированный генератор историй
+        </h1>
+        <p className="text-xl mb-8">Создайте уникальную историю в один клик!</p>
+      </header>
+
+      <main className="flex flex-col items-center justify-center">
+        <StoryForm onSubmit={handleStorySubmit} />
       </main>
       
       <footer className="text-center py-4">
