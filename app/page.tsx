@@ -1,12 +1,14 @@
 "use client";
 
-import Image from "next/image";
+import { useState } from 'react';
 import StoryForm from "./components/StoryForm";
+import StoryDisplay from "./components/StoryDisplay";
 
 export default function Home() {
+  const [currentPrompt, setCurrentPrompt] = useState('');
+
   const handleStorySubmit = (prompt: string) => {
-    // Здесь будет логика отправки запроса на создание истории
-    console.log("Создание истории с промптом:", prompt);
+    setCurrentPrompt(prompt);
   };
 
   return (
@@ -20,6 +22,7 @@ export default function Home() {
 
       <main className="flex flex-col items-center justify-center">
         <StoryForm onSubmit={handleStorySubmit} />
+        <StoryDisplay prompt={currentPrompt} />
       </main>
       
       <footer className="text-center py-4">
