@@ -399,7 +399,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
                 ) : (
                   <>
                     {clearingText ? inputValue : story}
-                    {(clearingText || isGenerating) && renderCursor()} {/* Убран курсор после генерации */}
+                    {(clearingText || (isGenerating && !isStoryComplete)) && renderCursor()}
                   </>
                 )}
               </motion.div>
