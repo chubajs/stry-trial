@@ -16,9 +16,10 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: 'mistralai/pixtral-12b:free',
+        max_tokens: 30,
         messages: [
           { role: 'system', content: 'Вы - креативный писатель, который придумывает короткие и интересные названия для историй.' },
-          { role: 'user', content: `Придумайте короткое и интересное название для следующей истории:\n\n${story.substring(0, 500)}...` }
+          { role: 'user', content: `Придумайте короткое и интересное название для следующей истории:\n\n${story.substring(0, 500)}...\n\n\n Оно должно быть коротким и понятным. Ответь одним предложением без вариантов.` }
         ],
       }),
     });
