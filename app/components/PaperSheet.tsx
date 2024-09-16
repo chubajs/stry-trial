@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiRefreshCw } from 'react-icons/fi';
 
 interface PaperSheetProps {
   onSubmit: (prompt: string) => void;
@@ -17,8 +18,33 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
   const [clearingText, setClearingText] = useState(false);
   const [clearPosition, setClearPosition] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const storyRef = useRef<HTMLDivElement>(null);
+  const [storyId, setStoryId] = useState<string | null>(null);
+  const [storyNumber, setStoryNumber] = useState<number | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [title, setTitle] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isThinkingTitle, setIsThinkingTitle] = useState(false);
+  const [thinkingText, setThinkingText] = useState('');
+  const [isErasingThinkingText, setIsErasingThinkingText] = useState(false);
+  const [isTypingTitle, setIsTypingTitle] = useState(false);
+
+  const scrollToBottom = () => {
+    if (storyRef.current) {
+      storyRef.current.scrollTop = storyRef.current.scrollHeight;
+    }
+  };
+
+  const scrollToTop = () => {
+    if (storyRef.current) {
+      storyRef.current.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  };
 
   useEffect(() => {
     if (prompt && isGenerating) {
@@ -44,6 +70,53 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
       return () => clearTimeout(timer);
     }
   }, [clearingText, clearPosition, inputValue]);
+
+  useEffect(() => {
+    if (isGenerating) {
+      scrollToBottom();
+    }
+  }, [story]);
+
+  useEffect(() => {
+    if (isStoryComplete && story) {
+      scrollToTop();
+      setIsThinkingTitle(true);
+      setTimeout(() => {
+        setIsThinkingTitle(false);
+        generateTitleAndSaveStory(story);
+      }, 2000);
+    }
+  }, [isStoryComplete, story]);
+
+  useEffect(() => {
+    if (isThinkingTitle) {
+      const text = 'Придумываю название...';
+      let index = 0;
+      const intervalId = setInterval(() => {
+        if (index < text.length) {
+          setThinkingText(prev => prev + text[index]);
+          index++;
+        } else {
+          clearInterval(intervalId);
+        }
+      }, 100);
+      return () => clearInterval(intervalId);
+    }
+  }, [isThinkingTitle]);
+
+  useEffect(() => {
+    if (!isThinkingTitle && thinkingText) {
+      setIsErasingThinkingText(true);
+      const intervalId = setInterval(() => {
+        setThinkingText(prev => prev.slice(0, -1));
+        if (thinkingText.length === 0) {
+          clearInterval(intervalId);
+          setIsErasingThinkingText(false);
+        }
+      }, 50);
+      return () => clearInterval(intervalId);
+    }
+  }, [isThinkingTitle, thinkingText]);
 
   const generateStory = async () => {
     try {
@@ -113,6 +186,80 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
     }
   };
 
+  const generateTitleAndSaveStory = async (storyContent: string) => {
+    if (!storyContent || storyContent.trim().length === 0) {
+      console.error('Cannot save empty story');
+      setSaveError('Не удалось сохранить пустую историю. Пожалуйста, попробуйте еще раз.');
+      return;
+    }
+
+    try {
+      console.log('Generating title for story...');
+      setIsThinkingTitle(true);
+      let generatedTitle = 'Без названия';
+      try {
+        const titleResponse = await fetch('/api/generateTitle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ story: storyContent }),
+        });
+        if (titleResponse.ok) {
+          const titleData = await titleResponse.json();
+          generatedTitle = titleData.title;
+          console.log('Generated title:', generatedTitle);
+        } else {
+          console.error('Failed to generate title:', await titleResponse.text());
+        }
+      } catch (titleError) {
+        console.error('Error during title generation:', titleError);
+      }
+      
+      // Начинаем анимацию стирания
+      setIsThinkingTitle(false);
+      setIsErasingThinkingText(true);
+
+      // Ждем, пока текст "Придумываю название..." будет стерт
+      await new Promise(resolve => setTimeout(resolve, thinkingText.length * 50 + 100));
+
+      setIsErasingThinkingText(false);
+      setIsTypingTitle(true);
+      setTitle('');
+
+      // Анимация печати нового названия
+      for (let i = 0; i <= generatedTitle.length; i++) {
+        setTitle(generatedTitle.slice(0, i));
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      setIsTypingTitle(false);
+
+      setIsSaving(true);
+      console.log('Saving story:', { title: generatedTitle, contentLength: storyContent.length, prompt, model: 'mistralai/pixtral-12b:free' });
+      const saveResponse = await fetch('/api/saveStory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: generatedTitle, content: storyContent, prompt, model: 'mistralai/pixtral-12b:free' }),
+      });
+
+      if (saveResponse.ok) {
+        const { id, number } = await saveResponse.json();
+        console.log('Story saved successfully:', { id, number });
+        setStoryId(id);
+        setStoryNumber(number);
+        setShareUrl(`${window.location.origin}/story/${id}`);
+        setSaveError(null);
+      } else {
+        const errorText = await saveResponse.text();
+        console.error('Failed to save story:', errorText);
+        throw new Error(errorText);
+      }
+    } catch (error) {
+      console.error('Error saving story:', error);
+      setSaveError(`Не удалось сохранить историю. Пожалуйста, попробуйте еще раз. Ошибка: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(inputValue);
@@ -130,62 +277,143 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
     setStory('');
     setIsStoryComplete(false);
     setError(null);
+    setSaveError(null);
+    setStoryId(null);
+    setStoryNumber(null);
+    setShareUrl(null);
+    setTitle(null);
+    setIsSaving(false);
+    setIsThinkingTitle(false);
+    setClearingText(false);
+    setClearPosition(0);
     onNewStory();
   };
 
+  const renderCursor = () => (
+    <motion.span
+      animate={isStoryComplete ? { opacity: [0, 1, 0] } : { opacity: 1 }}
+      transition={isStoryComplete ? { repeat: Infinity, duration: 1 } : {}}
+      className="inline-block w-2 h-5 bg-blue-500 ml-1 align-middle"
+    />
+  );
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full bg-white rounded-lg shadow-lg p-8 relative overflow-hidden flex flex-col"
-      style={{ minHeight: '500px' }}
-    >
-      <form onSubmit={handleSubmit} className="flex-grow relative">
-        {!isGenerating && !story && !error && (
-          <textarea
-            ref={inputRef}
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Напишите вашу идею для истории здесь..."
-            className="w-full h-full resize-none border-none outline-none text-lg"
-          />
-        )}
+    <div className="flex flex-col items-center relative">
+      <div className="w-full mb-4 flex justify-end items-center">
         <AnimatePresence>
-          {(clearingText || isGenerating || story || error) && (
+          {shareUrl && (
             <motion.div
-              ref={storyRef}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="w-full h-full overflow-y-auto whitespace-pre-wrap text-lg text-black"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex-grow mr-2 p-4 bg-gray-100 rounded-lg flex items-center"
             >
-              {error ? (
-                <p className="text-red-500">{error}</p>
+              {isSaving ? (
+                <span>Сохраняю...</span>
               ) : (
-                clearingText ? inputValue : story
-              )}
-              {(clearingText || (isGenerating && !isStoryComplete)) && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 1, 0] }}
-                  transition={{ repeat: Infinity, duration: 1 }}
-                  className="inline-block w-2 h-5 bg-blue-500 ml-1 align-middle"
-                />
+                <>
+                  <input
+                    type="text"
+                    value={shareUrl}
+                    readOnly
+                    className="flex-grow p-2 border rounded-l"
+                    onClick={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    onClick={() => navigator.clipboard.writeText(shareUrl)}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-r hover:bg-blue-600 transition-colors"
+                  >
+                    Копировать
+                  </button>
+                </>
               )}
             </motion.div>
           )}
         </AnimatePresence>
-      </form>
-      {(isStoryComplete || error) && (
-        <motion.button
+        <button
+          onClick={handleNewStory}
+          className="bg-blue-500 text-white px-4 py-2 rounded flex items-center hover:bg-blue-600 transition-colors"
+          title="Новая история"
+        >
+          <FiRefreshCw className="mr-2" />
+          Заново
+        </button>
+      </div>
+      
+      {shareUrl && (
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          onClick={handleNewStory}
-          className="mt-4 w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+          className="w-full mb-4 text-xs text-gray-500 flex justify-between items-center"
         >
-          {error ? 'Попробовать снова' : 'Новая история'}
-        </motion.button>
+          <span>#{storyNumber}</span>
+          <span>{new Date().toLocaleString()}</span>
+          <span>mistralai/pixtral-12b:free</span>
+        </motion.div>
       )}
-    </motion.div>
+      
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full bg-white rounded-lg shadow-lg p-8 relative overflow-hidden flex flex-col"
+        style={{ minHeight: '500px' }}
+      >
+        <AnimatePresence>
+          {(isThinkingTitle || isErasingThinkingText) && (
+            <motion.h2
+              key="thinking"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-2xl font-bold mb-4 h-10"
+            >
+              {thinkingText}
+              {renderCursor()}
+            </motion.h2>
+          )}
+          {(title || isTypingTitle) && !isThinkingTitle && !isErasingThinkingText && (
+            <motion.h2
+              key="title"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-2xl font-bold mb-4 h-10"
+            >
+              {title}
+              {renderCursor()}
+            </motion.h2>
+          )}
+        </AnimatePresence>
+        <form onSubmit={handleSubmit} className="flex-grow relative">
+          {!isGenerating && !story && !error && (
+            <textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Напишите вашу идею для истории здесь..."
+              className="w-full h-full resize-none border-none outline-none text-lg"
+            />
+          )}
+          <AnimatePresence>
+            {(clearingText || isGenerating || story || error) && (
+              <motion.div
+                ref={storyRef}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="w-full h-full overflow-y-auto whitespace-pre-wrap text-lg text-black"
+              >
+                {error ? (
+                  <p className="text-red-500">{error}</p>
+                ) : (
+                  <>
+                    {clearingText ? inputValue : story}
+                    {(clearingText || isGenerating || isStoryComplete) && renderCursor()}
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </form>
+      </motion.div>
+    </div>
   );
 }

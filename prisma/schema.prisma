@@ -9,6 +9,16 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+model Story {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  prompt    String
+  model     String
+  createdAt DateTime @default(now())
+  number    Int      @unique
 }
