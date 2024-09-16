@@ -18,10 +18,8 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
   const [clearingText, setClearingText] = useState(false);
   const [clearPosition, setClearPosition] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const storyRef = useRef<HTMLDivElement>(null);
-  const [storyId, setStoryId] = useState<string | null>(null);
   const [storyNumber, setStoryNumber] = useState<number | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [title, setTitle] = useState<string | null>(null);
@@ -173,7 +171,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
   const generateTitleAndSaveStory = async (storyContent: string) => {
     if (!storyContent || storyContent.trim().length === 0) {
       console.error('Cannot save empty story');
-      setSaveError('Не удалось сохранить пустую историю. Пожалуйста, попробуйте еще раз.');
+      setError('Не удалось сохранить пустую историю. Пожалуйста, попробуйте еще раз.');
       return;
     }
 
@@ -197,7 +195,8 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
         });
         if (titleResponse.ok) {
           const titleData = await titleResponse.json();
-          generatedTitle = titleData.title;
+          // Удаляем кавычки из начала и конца названия
+          generatedTitle = titleData.title.replace(/^["']|["']$/g, '').trim();
           console.log('Generated title:', generatedTitle);
         } else {
           console.error('Failed to generate title:', await titleResponse.text());
@@ -236,10 +235,9 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
       if (saveResponse.ok) {
         const { id, number } = await saveResponse.json();
         console.log('Story saved successfully:', { id, number });
-        setStoryId(id);
         setStoryNumber(number);
         setShareUrl(`${window.location.origin}/story/${id}`);
-        setSaveError(null);
+        setError(null);
       } else {
         const errorText = await saveResponse.text();
         console.error('Failed to save story:', errorText);
@@ -247,7 +245,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
       }
     } catch (error) {
       console.error('Error saving story:', error);
-      setSaveError(`Не удалось сохранить историю. Пожалуйста, попробуйте еще раз. Ошибка: ${error instanceof Error ? error.message : String(error)}`);
+      setError(`Не удалось сохранить историю. Пожалуйста, попробуйте еще раз. Ошибка: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsSaving(false);
     }
@@ -270,8 +268,6 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
     setStory('');
     setIsStoryComplete(false);
     setError(null);
-    setSaveError(null);
-    setStoryId(null);
     setStoryNumber(null);
     setShareUrl(null);
     setTitle(null);
