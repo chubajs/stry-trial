@@ -17,6 +17,13 @@
 body {
   color: var(--foreground);
   background: var(--background);
+}
+
+.font-story {
+  font-family: var(--font-neucha), cursive;
+}
+
+.font-system {
   font-family: 'JetBrains Mono', monospace;
 }
 

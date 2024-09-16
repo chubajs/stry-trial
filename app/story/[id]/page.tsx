@@ -70,7 +70,7 @@ export default function StoryPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full bg-white bg-opacity-50 rounded-lg shadow-lg p-8"
+          className="w-full bg-white bg-opacity-50 rounded-lg shadow-lg p-8 font-story"
         >
           <h1 className="text-2xl font-bold mb-4">{story.title}</h1>
           <div className="text-gray-700 mb-4 whitespace-pre-wrap">{story.content}</div>
@@ -78,7 +78,7 @@ export default function StoryPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full mt-4 text-xs text-gray-500 flex justify-between items-center"
+          className="w-full mt-4 text-xs text-gray-500 flex justify-between items-center font-system"
         >
           <span>#{story.number}</span>
           <span>{new Date(story.createdAt).toLocaleString()}</span>
@@ -87,7 +87,7 @@ export default function StoryPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full mt-4 p-4 bg-white bg-opacity-50 rounded-lg flex items-center"
+          className="w-full mt-4 p-4 bg-white bg-opacity-50 rounded-lg flex items-center font-system"
         >
           <div className="flex-grow flex items-center">
             <input
@@ -111,11 +111,11 @@ export default function StoryPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         onClick={handleCreateNewStory}
-        className="mt-8 bg-green-500 text-white px-6 py-3 rounded-full hover:bg-green-600 transition-colors text-lg font-semibold"
+        className="mt-8 bg-green-500 text-white px-6 py-3 rounded-full hover:bg-green-600 transition-colors text-lg font-semibold font-system"
       >
         Создать свою историю
       </motion.button>
-      <footer className="w-full text-center py-4 mt-8">
+      <footer className="w-full text-center py-4 mt-8 font-system">
         <p>&copy; {new Date().getFullYear()} Sergey Bulaev. All rights reserved.</p>
         <a
           className="text-sm text-gray-600 hover:underline"

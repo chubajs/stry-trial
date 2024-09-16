@@ -292,7 +292,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
 
   return (
     <div className="flex flex-col items-center relative">
-      <div className="w-full mb-4 flex justify-end items-center">
+      <div className="w-full mb-4 flex justify-end items-center font-system">
         <AnimatePresence>
           {shareUrl && (
             <motion.div
@@ -337,7 +337,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full mb-4 text-xs text-gray-500 flex justify-between items-center"
+          className="w-full mb-4 text-xs text-gray-500 flex justify-between items-center font-system"
         >
           <span>#{storyNumber}</span>
           <span>{new Date().toLocaleString()}</span>
@@ -348,7 +348,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full bg-white rounded-lg shadow-lg p-8 relative overflow-hidden flex flex-col"
+        className="w-full bg-white rounded-lg shadow-lg p-8 relative overflow-hidden flex flex-col font-story"
         style={{ minHeight: '500px' }}
       >
         <AnimatePresence mode="wait">
