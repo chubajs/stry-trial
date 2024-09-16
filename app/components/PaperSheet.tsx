@@ -16,6 +16,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
   const [isStoryComplete, setIsStoryComplete] = useState(false);
   const [clearingText, setClearingText] = useState(false);
   const [clearPosition, setClearPosition] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const storyRef = useRef<HTMLDivElement>(null);
 
@@ -23,6 +24,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
     if (prompt && isGenerating) {
       setClearingText(true);
       setClearPosition(inputValue.length);
+      setError(null);
     }
   }, [prompt, isGenerating]);
 
@@ -44,48 +46,70 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
   }, [clearingText, clearPosition, inputValue]);
 
   const generateStory = async () => {
-    const response = await fetch('/api/generateStory', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 секунд таймаут
 
-    if (!response.body) {
-      console.error('No response body');
-      return;
-    }
+      const response = await fetch('/api/generateStory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+        signal: controller.signal
+      });
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+      clearTimeout(timeoutId);
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) {
-        setIsStoryComplete(true);
-        break;
+      if (!response.ok) {
+        throw new Error('Failed to generate story');
       }
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
+      if (!response.body) {
+        throw new Error('No response body');
+      }
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
-          if (data === '[DONE]') {
-            setIsStoryComplete(true);
-            break;
-          }
-          try {
-            const parsed = JSON.parse(data);
-            const newToken = parsed.choices[0]?.delta?.content || '';
-            if (newToken) {
-              setStory(prev => prev + newToken);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          setIsStoryComplete(true);
+          break;
+        }
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              setIsStoryComplete(true);
+              break;
             }
-          } catch (error) {
-            console.error('Error parsing JSON:', error);
+            try {
+              const parsed = JSON.parse(data);
+              const newToken = parsed.choices[0]?.delta?.content || '';
+              if (newToken) {
+                setStory(prev => prev + newToken);
+              }
+            } catch (error) {
+              console.error('Error parsing JSON:', error);
+            }
           }
         }
       }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          setError('Превышено время ожидания. Пожалуйста, попробуйте еще раз.');
+        } else {
+          setError('Произошла ошибка при генерации истории. Пожалуйста, попробуйте еще раз.');
+        }
+      } else {
+        setError('Произошла неизвестная ошибка. Пожалуйста, попробуйте еще раз.');
+      }
+      setIsStoryComplete(true);
     }
   };
 
@@ -105,6 +129,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
     setInputValue('');
     setStory('');
     setIsStoryComplete(false);
+    setError(null);
     onNewStory();
   };
 
@@ -116,7 +141,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
       style={{ minHeight: '500px' }}
     >
       <form onSubmit={handleSubmit} className="flex-grow relative">
-        {!isGenerating && !story && (
+        {!isGenerating && !story && !error && (
           <textarea
             ref={inputRef}
             value={inputValue}
@@ -127,15 +152,19 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
           />
         )}
         <AnimatePresence>
-          {(clearingText || isGenerating || story) && (
+          {(clearingText || isGenerating || story || error) && (
             <motion.div
               ref={storyRef}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="w-full h-full overflow-y-auto whitespace-pre-wrap text-lg text-black"
             >
-              {clearingText ? inputValue : story}
-              {(clearingText || isGenerating) && (
+              {error ? (
+                <p className="text-red-500">{error}</p>
+              ) : (
+                clearingText ? inputValue : story
+              )}
+              {(clearingText || (isGenerating && !isStoryComplete)) && (
                 <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 1, 0] }}
@@ -147,14 +176,14 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
           )}
         </AnimatePresence>
       </form>
-      {isStoryComplete && (
+      {(isStoryComplete || error) && (
         <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           onClick={handleNewStory}
           className="mt-4 w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
         >
-          Новая история
+          {error ? 'Попробовать снова' : 'Новая история'}
         </motion.button>
       )}
     </motion.div>

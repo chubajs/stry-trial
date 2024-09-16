@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       'X-Title': 'Personalized Story Generator',
     },
     body: JSON.stringify({
-      model: 'mistralai/pixtral-12b:free',
+      model: 'mistralai/mistral-nemo',
       messages: [
         { role: 'system', content: 'Вы - креативный писатель, который создает короткие, увлекательные истории на основе подсказок пользователей. Используйте переносы строк для разделения абзацев.' },
         { role: 'user', content: prompt }
