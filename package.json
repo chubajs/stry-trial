@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "next lint"
+    "lint": "next lint",
+    "start:prod": "NEXT_PUBLIC_SITE_URL=http://192.168.1.12:3001 NODE_ENV=production next start -p 3001"
   },
   "dependencies": {
     "@prisma/client": "^5.19.1",
