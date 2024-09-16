@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify({
       model: 'mistralai/pixtral-12b:free',
       messages: [
-        { role: 'system', content: 'Вы - креативный писатель, который создает короткие, увлекательные истории на основе подсказок пользователей.' },
+        { role: 'system', content: 'Вы - креативный писатель, который создает короткие, увлекательные истории на основе подсказок пользователей. Используйте переносы строк для разделения абзацев.' },
         { role: 'user', content: prompt }
       ],
       stream: true,

@@ -3,16 +3,24 @@
 import { useState } from 'react';
 import StoryForm from "./components/StoryForm";
 import StoryDisplay from "./components/StoryDisplay";
+import PaperSheet from "./components/PaperSheet";
 
 export default function Home() {
   const [currentPrompt, setCurrentPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleStorySubmit = (prompt: string) => {
     setCurrentPrompt(prompt);
+    setIsGenerating(true);
+  };
+
+  const handleNewStory = () => {
+    setCurrentPrompt('');
+    setIsGenerating(false);
   };
 
   return (
-    <div className="grid grid-rows-[auto_1fr_auto] min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
+    <div className="min-h-screen p-8 pb-20 flex flex-col items-center justify-center gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <header className="text-center">
         <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-500 to-pink-500 text-transparent bg-clip-text">
           Персонализированный генератор историй
@@ -20,9 +28,13 @@ export default function Home() {
         <p className="text-xl mb-8">Создайте уникальную историю в один клик!</p>
       </header>
 
-      <main className="flex flex-col items-center justify-center">
-        <StoryForm onSubmit={handleStorySubmit} />
-        <StoryDisplay prompt={currentPrompt} />
+      <main className="w-full max-w-2xl">
+        <PaperSheet
+          onSubmit={handleStorySubmit}
+          prompt={currentPrompt}
+          isGenerating={isGenerating}
+          onNewStory={handleNewStory}
+        />
       </main>
       
       <footer className="text-center py-4">
