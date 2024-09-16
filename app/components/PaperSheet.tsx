@@ -89,22 +89,6 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
   }, [isStoryComplete, story]);
 
   useEffect(() => {
-    if (isThinkingTitle) {
-      const text = 'Придумываю название...';
-      let index = 0;
-      const intervalId = setInterval(() => {
-        if (index < text.length) {
-          setThinkingText(prev => prev + text[index]);
-          index++;
-        } else {
-          clearInterval(intervalId);
-        }
-      }, 100);
-      return () => clearInterval(intervalId);
-    }
-  }, [isThinkingTitle]);
-
-  useEffect(() => {
     if (!isThinkingTitle && thinkingText) {
       setIsErasingThinkingText(true);
       const intervalId = setInterval(() => {
@@ -113,7 +97,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
           clearInterval(intervalId);
           setIsErasingThinkingText(false);
         }
-      }, 50);
+      }, 20);
       return () => clearInterval(intervalId);
     }
   }, [isThinkingTitle, thinkingText]);
@@ -194,8 +178,16 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
     }
 
     try {
-      console.log('Generating title for story...');
+      // Анимация "Придумываю название..."
       setIsThinkingTitle(true);
+      setThinkingText(''); // Сбрасываем текст перед анимацией
+      for (let i = 0; i <= "Придумываю название...".length; i++) {
+        setThinkingText("Придумываю название...".slice(0, i));
+        await new Promise(resolve => setTimeout(resolve, 20)); // Ускоренная анимация
+      }
+
+      // Генерация названия
+      console.log('Generating title for story...');
       let generatedTitle = 'Без названия';
       try {
         const titleResponse = await fetch('/api/generateTitle', {
@@ -213,25 +205,26 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
       } catch (titleError) {
         console.error('Error during title generation:', titleError);
       }
-      
-      // Начинаем анимацию стирания
+
+      // Анимация стирания "Придумываю название..."
       setIsThinkingTitle(false);
       setIsErasingThinkingText(true);
-
-      // Ждем, пока текст "Придумываю название..." будет стерт
-      await new Promise(resolve => setTimeout(resolve, thinkingText.length * 50 + 100));
-
+      for (let i = "Придумываю название...".length; i >= 0; i--) {
+        setThinkingText("Придумываю название...".slice(0, i));
+        await new Promise(resolve => setTimeout(resolve, 20)); // Ускоренная анимация
+      }
       setIsErasingThinkingText(false);
-      setIsTypingTitle(true);
-      setTitle('');
 
       // Анимация печати нового названия
+      setIsTypingTitle(true);
+      setTitle('');
       for (let i = 0; i <= generatedTitle.length; i++) {
         setTitle(generatedTitle.slice(0, i));
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 30)); // Ускоренная анимация
       }
       setIsTypingTitle(false);
 
+      // Сохранение истории
       setIsSaving(true);
       console.log('Saving story:', { title: generatedTitle, contentLength: storyContent.length, prompt, model: 'mistralai/pixtral-12b:free' });
       const saveResponse = await fetch('/api/saveStory', {
@@ -291,8 +284,8 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
 
   const renderCursor = () => (
     <motion.span
-      animate={isStoryComplete ? { opacity: [0, 1, 0] } : { opacity: 1 }}
-      transition={isStoryComplete ? { repeat: Infinity, duration: 1 } : {}}
+      animate={{ opacity: [0, 1, 0] }}
+      transition={{ repeat: Infinity, duration: 1 }}
       className="inline-block w-2 h-5 bg-blue-500 ml-1 align-middle"
     />
   );
@@ -358,27 +351,27 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
         className="w-full bg-white rounded-lg shadow-lg p-8 relative overflow-hidden flex flex-col"
         style={{ minHeight: '500px' }}
       >
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {(isThinkingTitle || isErasingThinkingText) && (
             <motion.h2
               key="thinking"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="text-2xl font-bold mb-4 h-10"
+              className="text-lg mb-4 h-10" // Обычный шрифт для "Придумываю название..."
             >
               {thinkingText}
               {renderCursor()}
             </motion.h2>
           )}
-          {(title || isTypingTitle) && !isThinkingTitle && !isErasingThinkingText && (
+          {title && !isThinkingTitle && !isErasingThinkingText && (
             <motion.h2
               key="title"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-2xl font-bold mb-4 h-10"
+              className="text-2xl font-bold mb-4 h-10" // Жирный шрифт для названия
             >
               {title}
-              {renderCursor()}
+              {isTypingTitle && renderCursor()}
             </motion.h2>
           )}
         </AnimatePresence>
@@ -406,7 +399,7 @@ export default function PaperSheet({ onSubmit, prompt, isGenerating, onNewStory 
                 ) : (
                   <>
                     {clearingText ? inputValue : story}
-                    {(clearingText || isGenerating || isStoryComplete) && renderCursor()}
+                    {(clearingText || isGenerating) && renderCursor()} {/* Убран курсор после генерации */}
                   </>
                 )}
               </motion.div>
